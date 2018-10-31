@@ -1,6 +1,6 @@
-# convert_cisco_pcrf.py.py:
+# LoggerInit.py:
 #
-# Description: Class for seting up the Logger instance
+# Description: Class for setting up the Logger instance
 #
 # Created by : Daniel Jaramillo
 # Creation Date: 29/10/2018

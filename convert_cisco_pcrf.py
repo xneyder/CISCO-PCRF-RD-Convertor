@@ -36,8 +36,19 @@ import sys
 import os
 import time
 import glob
+import pandas as pd
 from threading import Thread
 from LoggerInit import LoggerInit
+
+#Load the configuration from HLD file
+def load_hld(hld_file):
+    app_logger=logger.get_logger("load_hld "+hld_file)
+    app_logger.info("Loading configuration")
+    xl=pd.ExcelFile(hld_file)
+    df=xl.parse('Counters')
+    print(df.iloc[2:,[2,3,4]])
+
+
 
 #Description: running in a thread to process the files found in the folder
 #Input Parametes:
@@ -58,7 +69,12 @@ def process_folder(folder):
                             .format(file_name=file_name))
             with open(file_name) as file:
                 lines=file.read().split('\n')
-
+                for line in lines:
+                    arr_line=line.split(',')
+                    ne_name=arr_line[1]
+                    rd_counter_name=arr_line[2]
+                    counter_value=arr_line[3]
+                    #Check if the counter name is found in the list
 
 def main():
     app_logger=logger.get_logger("main")
@@ -71,6 +87,8 @@ def main():
                          .format(script=sys.argv[0]))
         quit()
     input_folders=sys.argv[1].split(' ')
+    load_hld(hld_file)
+    quit()
     workers=[]
     #Start a thread for each input folder and keep track of it in workers
     for folder in input_folders:
@@ -96,7 +114,13 @@ def main():
 
 #Script starts running here
 if __name__ == "__main__":
-    log_dir=os.environ['LOG_DIR']
+    #If LOG_DIR environment var is not defined use /tmp as logdir
+    if 'LOG_DIR' in os.environ:
+        log_dir=os.environ['LOG_DIR']
+    else:
+        log_dir="/tmp"
+
     log_file=os.path.join(log_dir,"convert_cisco_pcrf.log")
     logger=LoggerInit(log_file,10)
+    hld_file="HLD-CISCO_PCRF_FPP.xls"
     main()
