@@ -214,7 +214,12 @@ def process_folder(folder):
                     else:
                         out_data[om_group][out_key_str][db_name]=counter_value
             #Build the output raw data files
-            datetime=file_name.split('-')[3].split('.')[0]
+            try:
+                datetime=file_name.split('-')[3].split('.')[0]
+            except IndexError:
+                app_logger.error("""File {file_name} has incorrect name
+                                 format""".format(file_name=file_name))
+                continue
             for om_group,data in out_data.items():
                 out_file_name=om_group+"-"+os.path.basename(
                     file_name.replace("prev_",""))
