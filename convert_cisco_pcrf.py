@@ -252,6 +252,8 @@ def process_folder(folder):
                                 counter_value=counter_value
                             ))
                         file.write("\n")
+                        #Add end of file for parser to work in a full batch
+                    file.write('#END#')
                 app_logger.info("{out_file_name} file created"
                                 .format(out_file_name=out_file_name))
             os.rename(file_name,file_name+"_")

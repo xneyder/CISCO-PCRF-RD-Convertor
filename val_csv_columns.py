@@ -50,8 +50,9 @@ def main():
                     continue
                 cols=len(filedata[idx].split(','))
                 if prev_cols and cols!=prev_cols:
-                    print("ERROR Line {line} # of columns changed to {cols}"
-                          .format(cols=cols,line=idx+1))
+                    print("""ERROR {line} Line {line_idx} # of columns changed
+                          to {cols}"""
+                          .format(line=filedata[idx],cols=cols,line_idx=idx+1))
                     error=True
                 prev_cols=cols
             if not error:
