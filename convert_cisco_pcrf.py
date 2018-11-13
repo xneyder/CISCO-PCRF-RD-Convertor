@@ -77,12 +77,14 @@ def load_hld(hld_file):
                     key_db_name=db_name
                 pi_key_list[om_group][key]=key_db_name
         else:
-            #Get the keys in the counter_name
+            #Get the keys in the counter_name only for the first counter
             if om_group not in ct_key_list:
-                ct_key_list[om_group]=[]
                 for key in re.findall(key_regexp,rd_name):
-                    #Get the db_name of the key foun in pi_key_list
+                    if om_group not in ct_key_list:
+                        ct_key_list[om_group]=[]
+                    #Get the db_name of the key found in pi_key_list
                     ct_key_list[om_group].append(pi_key_list[om_group][key])
+
 
             #initialize it with empty arrays
             if om_group not in counter_list:
@@ -112,14 +114,17 @@ def load_hld(hld_file):
                 re_name=re_name.replace(']','')
                 #Replace all the keys in the counter name by (.*)
                 local_key_list=[]
-                for db_key in ct_key_list[om_group]:
-                    key=sw_pi_key_list[db_key]
-                    if key not in re_name:
-                        local_key_list.append('NA')
-                    else:
-                        #Store the db name for the key
-                        local_key_list.append(db_key)
-                    re_name=re_name.replace(key,"(.*)")
+                try:
+                    for db_key in ct_key_list[om_group]:
+                        key=sw_pi_key_list[db_key]
+                        if key not in re_name:
+                            local_key_list.append('NA')
+                        else:
+                            #Store the db name for the key
+                            local_key_list.append(db_key)
+                        re_name=re_name.replace(key,"(.*)")
+                except KeyError:
+                    pass
                 metadata[re_name]={
                         'key_list':local_key_list,
                         'db_name':db_name,
@@ -139,7 +144,7 @@ def load_hld(hld_file):
 #    folder: path to the raw data files
 def process_folder(folder):
     app_logger=logger.get_logger("process_folder "+folder)
-    cycle_interval=60
+    cycle_interval=10
     file_mask=os.path.join(folder,"pre*csv")
     while True:
         app_logger.info("Looking for new files")
@@ -237,8 +242,11 @@ def process_folder(folder):
                     #add the ne_name to the header
                     file.write("NE_NAME")
                     #add to the header the name of the keys
-                    for key in ct_key_list[om_group]:
-                        file.write(",{key}".format(key=key))
+                    try:
+                        for key in ct_key_list[om_group]:
+                            file.write(",{key}".format(key=key))
+                    except KeyError:
+                        pass
                     #add to the header the name of the columns
                     for counter_name in counter_list[om_group]:
                         file.write(",{counter_name}".format(
