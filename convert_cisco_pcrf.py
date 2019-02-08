@@ -42,6 +42,24 @@ from threading import Thread
 from LoggerInit import LoggerInit
 
 ####
+#Description: exits if the current process is running
+def check_running():
+	app_logger=logger.get_logger("check_running")
+	process_name=os.path.basename(sys.argv[0])
+	pids=[pid for pid in os.listdir('/proc') if pid.isdigit()]
+	for pid in pids:
+		if int(pid) == int(os.getpid()):
+			continue
+		try:
+			cmd=open(os.path.join('/proc',pid,'cmdline')).read()
+			if process_name in cmd and 'python' in cmd:
+				app_logger.error('Already running {pid} {cmd}'.format(pid=pid, cmd=cmd))
+				quit()
+		except IOError:
+			continue
+
+
+####
 #Description: Load the configuration from HLD file
 #Input Parametes:
 #    hld_file: Excel containing the functional specification for the library
@@ -131,10 +149,17 @@ def load_hld(hld_file):
                         'om_group':om_group,
                     }
                 counter_list[om_group].add(db_name)
-    #create the list regexp_list with all the regular expresions
-    regexp_list=[re_name for re_name in metadata.keys()]
+    #create the list regexp_list with ale the regular expresions
+    regexp_const_list=[re_name for re_name,data in metadata.items()
+            if len(data['key_list'])==0
+        ]
+    regexp_var_list=[re_name for re_name,data in metadata.items()
+            if len(data['key_list'])>0
+        ]
     #sort the list by the length in reverse order
-    regexp_list.sort(key = lambda s:len(s),reverse=True)
+    regexp_const_list.sort(key = lambda s:len(s),reverse=True)
+    regexp_var_list.sort(key = lambda s:len(s),reverse=True)
+    regexp_list=regexp_const_list+regexp_var_list
     #Compile the regexp list
     regexp_list=[re.compile(s) for s in regexp_list]
 
@@ -144,7 +169,7 @@ def load_hld(hld_file):
 #    folder: path to the raw data files
 def process_folder(folder):
     app_logger=logger.get_logger("process_folder "+folder)
-    cycle_interval=10
+    cycle_interval=30
     file_mask=os.path.join(folder,"pre*csv")
     while True:
         app_logger.info("Looking for new files")
@@ -155,8 +180,8 @@ def process_folder(folder):
         time.sleep(cycle_interval)
         for file_name in file_list:
             out_data={}
-            app_logger.info("Processing file {file_name}"
-                            .format(file_name=file_name))
+            #app_logger.info("Processing file {file_name}"
+            #                .format(file_name=file_name))
             with open(file_name,'r') as file:
                 lines=file.read().split('\n')
                 for line in filter(None,lines):
@@ -220,14 +245,15 @@ def process_folder(folder):
                         out_data[om_group][out_key_str][db_name]=counter_value
             #Build the output raw data files
             try:
-                datetime=file_name.split('-')[3].split('.')[0]
+                datetime=file_name.split('-')[-1].split('.')[0]
             except IndexError:
                 app_logger.error("""File {file_name} has incorrect name
                                  format""".format(file_name=file_name))
                 continue
             for om_group,data in out_data.items():
-                out_file_name=om_group+"-"+os.path.basename(
-                    file_name.replace("prev_",""))
+                out_file_name=os.path.basename(file_name.replace("pre_",""))
+		out_file_name=out_file_name.replace(".csv","")
+		out_file_name=out_file_name+"-"+om_group+".csv"
                 out_file_name=os.path.join(
                     os.path.dirname(file_name),out_file_name)
                 with open(out_file_name,'w') as file:
@@ -267,9 +293,10 @@ def process_folder(folder):
                         file.write("\n")
                         #Add end of file for parser to work in a full batch
                     file.write('#END#')
-                app_logger.info("{out_file_name} file created"
-                                .format(out_file_name=out_file_name))
-            os.rename(file_name,file_name+"_")
+                #app_logger.info("{out_file_name} file created"
+                #                .format(out_file_name=out_file_name))
+            #os.rename(file_name,file_name+"_")
+            os.remove(file_name)
 
 
 
@@ -313,14 +340,15 @@ def main():
 
 #Application starts running here
 if __name__ == "__main__":
-    #If LOG_DIR environment var is not defined use /tmp as logdir
+    #If LOG_DIR environment var is not defined use /teoco/sa_root_med03/logs/ as logdir
     if 'LOG_DIR' in os.environ:
         log_dir=os.environ['LOG_DIR']
     else:
-        log_dir="/tmp"
+        log_dir="/teoco/sa_root_med03/logs/"
 
     log_file=os.path.join(log_dir,"convert_cisco_pcrf.log")
     logger=LoggerInit(log_file,10)
+    check_running()
     hld_file="HLD-CISCO_PCRF_FPP.xls"
     metadata={}
     pi_key_list={}
